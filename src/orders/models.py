@@ -11,7 +11,7 @@ User = get_user_model()
 class Order(TimeStampedModel):
     uuid = models.UUIDField(default=uuid.uuid4, unique=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
-    payment_id = models.CharField(max_length=255)
+    payment_id = models.CharField(max_length=255, null=True, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(choices=OrderStatusChoice.CHOICE_LIST, max_length=16)
 
