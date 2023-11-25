@@ -78,9 +78,7 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
             if settings.SIMPLE_JWT["ROTATE_REFRESH_TOKENS"]:
                 payload = refresh.payload
                 id = payload["user_id"]
-                print(id)
                 user = User.objects.get(id=id)
-                print(user)
                 if not settings.ALLOW_NEW_REFRESH_TOKENS_FOR_UNVERIFIED_USERS:
                     if user.is_active == False:
                         raise TokenError({"details": "User is inactive", "code": "user_inactive"})
@@ -97,7 +95,7 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
                 if settings.SIMPLE_JWT["BLACKLIST_AFTER_ROTATION"]:
                     OutstandingToken.objects.create(
                         user=user,
-                        jti=payload[settings.SIMPLE_JWT["JTI_CLIAM"]],
+                        jti=payload[settings.SIMPLE_JWT["JTI_CLAIM"]],
                         token=str(refresh),
                         created_at=refresh.current_time,
                         expires_at=datetime_from_epoch(payload["exp"]),
