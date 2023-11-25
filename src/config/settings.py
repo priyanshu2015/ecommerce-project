@@ -11,6 +11,12 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
+import os
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import rsa
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,6 +43,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'authentication',
+    'customer_support',
+    'main',
+    'orders',
+    'products',
+    'users',
+    'rest_framework',
+    "rest_framework_simplejwt.token_blacklist",  # creates 2 models in DB - outstanding tokens and blacklisted tokens
 ]
 
 MIDDLEWARE = [
@@ -121,3 +135,105 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = 'authentication.User'
+
+FRONTEND_HOST = config("FRONTEND_HOST")
+
+FRONTEND_PROTOCOL = config("FRONTEND_PROTOCOL")
+
+
+AUTHORIZATION_DIR = os.path.join(Path(BASE_DIR), "authorization")
+JWT_PRIVATE_KEY_PATH = os.path.join(AUTHORIZATION_DIR, "jwt_key")
+JWT_PUBLIC_KEY_PATH = os.path.join(AUTHORIZATION_DIR, "jwt_key.pub")
+
+if (not os.path.exists(JWT_PRIVATE_KEY_PATH)) or (
+    not os.path.exists(JWT_PUBLIC_KEY_PATH)
+):
+    if not os.path.exists(AUTHORIZATION_DIR):
+        os.makedirs(AUTHORIZATION_DIR)
+
+    private_key = rsa.generate_private_key(
+        public_exponent=65537, key_size=4096, backend=default_backend()
+    )
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    with open(JWT_PRIVATE_KEY_PATH, "w") as pk:
+        pk.write(pem.decode())
+
+    public_key = private_key.public_key()
+    pem_public = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    with open(JWT_PUBLIC_KEY_PATH, "w") as pk:
+        pk.write(pem_public.decode())
+    print("PUBLIC/PRIVATE keys Generated!")
+
+
+# JWT Access validity duration in days
+ACCESS_TOKEN_VALID_DURATION = int(config("ACCESS_TOKEN_VALID_DURATION"))
+# JWT Refresh token validity duration in weeks
+REFRESH_TOKEN_VALID_DURATION = int(config("REFRESH_TOKEN_VALID_DURATION"))
+
+# Visit this page to see all the registered JWT claims:
+# https://tools.ietf.org/html/rfc7519#section-4.1
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        days=ACCESS_TOKEN_VALID_DURATION
+    ),  # "exp" (Expiration Time) Claim
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        weeks=REFRESH_TOKEN_VALID_DURATION
+    ),  # "exp" (Expiration Time) Claim
+    "ROTATE_REFRESH_TOKENS": True,  # When set to True, if a refresh token is submitted to the TokenRefreshView, a new refresh token will be returned along with the new access token.
+    "BLACKLIST_AFTER_ROTATION": True,  # If the blacklist app is in use and the BLACKLIST_AFTER_ROTATION setting is set to True, refresh tokens submitted to the refresh view will be added to the blacklist.
+    "UPDATE_LAST_LOGIN": False,  # When set to True, last_login field in the auth_user table is updated upon login (TokenObtainPairView).
+    # Warning: throttle the endpoint with DRF at the very least otherwise it will slow down the server if someone is abusing with the view.
+    "ALGORITHM": "RS256",  # 'alg' (Algorithm Used) specified in header
+    "SIGNING_KEY": open(JWT_PRIVATE_KEY_PATH).read(),
+    "VERIFYING_KEY": open(JWT_PUBLIC_KEY_PATH).read(),
+    "AUDIENCE": None,  # "aud" (Audience) Claim
+    "ISSUER": None,  # "iss" (Issuer) Claim
+    "USER_ID_CLAIM": "user_id",  # The field name to use for identifying user
+    "USER_ID_FIELD": "id",  # The field in the DB which will be filled in USER_ID_CLAIM
+    "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",  # This rule is applied after a valid token is processed. The user object is passed to the callable as an argument. The default rule is to check that the is_active flag is still True. The callable must return a boolean, True if authorized, False otherwise resulting in a 401 status code.
+    "JTI_CLAIM": "jti",  # A token’s unique identifier
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    # Default global custom exception handler but we have already handled it in renderers
+    # "EXCEPTION_HANDLER": "common.custom_exception_handler.handle_exception",
+    # "DEFAULT_RENDERER_CLASSES": DEFAULT_RENDERER_CLASSES,
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+        # "common.throttler.CustomAnonRateThrottle",
+        # "common.throttler.CustomUserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "send_email": "5/day",
+        "get_started": "5/day",
+        "newsletter": "5/day",
+        "anon": "4000/minute",
+        "user": "2000/minute",
+    },
+    # "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    # default page size if limit not given in limit offset pagination
+    # "PAGE_SIZE": 1,
+}
+
+ALLOW_NEW_REFRESH_TOKENS_FOR_UNVERIFIED_USERS = False
+
+
+# Managing media
+MEDIA_ROOT = os.path.join(BASE_DIR , 'media')
+MEDIA_URL = '/media/'
