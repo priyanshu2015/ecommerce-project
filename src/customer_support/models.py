@@ -11,6 +11,8 @@ class CustomerSupportManager(models.Manager):
 # Create your models here.
 class CustomerSupportUser(User):
 
+    objects = CustomerSupportManager()
+
     class Meta:
         proxy = True
     
