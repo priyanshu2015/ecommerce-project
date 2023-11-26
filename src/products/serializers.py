@@ -7,6 +7,11 @@ class ProductTagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ["title"]
+        extra_kwargs = {
+            "title": {
+                "validators": []
+            }
+        }
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -18,16 +23,17 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 
-class PostCreateSerializer(serializers.ModelSerializer):
+class ProductCreateSerializer(serializers.ModelSerializer):
     tags = ProductTagSerializer(many=True, required=False)
-    image = serializers.CharField()
+    image = serializers.CharField(required=False)
 
     class Meta:
         model = Product
         fields = [
             "image",
-            "caption",
-            "tags"
+            "name",
+            "tags",
+            "price"
         ]
 
     def create(self, validated_data):
@@ -47,6 +53,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
                         new_tag_object_list.append(
                             Tag(title=tag_title)
                         )
+                new_tags = []
                 if len(new_tag_object_list) > 0:
                     new_tags = Tag.objects.bulk_create(new_tag_object_list)
 
@@ -58,12 +65,12 @@ class PostCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         user = request.user
 
-        validated_data["user"] = user
+        validated_data["admin_user"] = user
 
-        post = super().create(validated_data)
-        if validated_data.get("tags") is not None:
-            post.tags.add(*tags_to_be_added)
-        return post
+        product = super().create(validated_data)
+        if len(tags) > 0:
+            product.tags.add(*tags_to_be_added)
+        return product
 
 
 class ProductImageSerializer(serializers.ModelSerializer):

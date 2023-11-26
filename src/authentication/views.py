@@ -22,6 +22,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 )
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from common.error_codes import ErrorCode
 
 logger = logging.getLogger(__file__)
 

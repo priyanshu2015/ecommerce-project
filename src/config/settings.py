@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'orders',
     'products',
     'users',
+    'admin_dashboard',
     'rest_framework',
     "rest_framework_simplejwt.token_blacklist",  # creates 2 models in DB - outstanding tokens and blacklisted tokens
 ]

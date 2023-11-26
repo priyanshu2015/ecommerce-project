@@ -2,16 +2,22 @@ from django.shortcuts import render
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.views import APIView
 from products.models import Product
-from .serializers import PostCreateSerializer, ProductSerializer, ProductImageSerializer
+from .serializers import ProductCreateSerializer, ProductSerializer, ProductImageSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 import os
 import uuid
+from rest_framework.permissions import IsAuthenticated
+from common.permissions import IsSuperUser
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.versioning import URLPathVersioning, NamespaceVersioning, QueryParameterVersioning
 
 
 class ProductImageUpload(APIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated, IsSuperUser]
     serializer_class = ProductImageSerializer
     parser_classes = [MultiPartParser]
 
@@ -43,17 +49,44 @@ class ProductImageUpload(APIView):
 
 
 class ListCreateProductView(ListCreateAPIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated, IsSuperUser]
     serializer_class = ProductSerializer
     # parser_classes = [MultiPartParser]
+    pagination_class = LimitOffsetPagination # PageNumberPagination
+    filter_backends = [SearchFilter, OrderingFilter, DjangoFilterBackend]
+    # filterset_fields = ["admin_user_id", "admin_user__first_name", "tags__title", "uuid"]
+    filterset_fields = {
+        "tags__title": ["exact", "in"],  # ?access_state__in=RESTRICTED,PUBLIC
+        # ?tags__title__in=RESTRICTED,PUBLIC&access__is_owner=False --> for shared by others
+        # 'access__is_owner': ["exact"]
+        "name": ["exact", "in"],
+        "created_at": ["gte", "lte"],
+        "updated_at": ["gte", "lte"],
+    }
+    search_fields = ["name", "tags__title"]
+    ordering_fields = ["created_at", "updated_at"]
+    ordering = ["-created_at"]
+    page_size = 1
+     # default_limit has precedence over default_limit
+    default_limit = 5
+    max_limit = 20
+    versioning_class = NamespaceVersioning
+
+    def list(self, request, *args, **kwargs):
+        self.pagination_class.page_size = self.page_size
+        self.pagination_class.max_limit = self.max_limit
+        self.pagination_class.default_limit = self.default_limit
+        return super().list(request, *args, **kwargs)
 
     def get_serializer_class(self):
+        print("hello")
+        print(self.request.version)
         if self.request.method == "POST":
-            return PostCreateSerializer
+            return ProductCreateSerializer
         return super().get_serializer_class()
 
     def get_queryset(self, queryset = None):
-        return Product.objects.filter().order_by("-created_at").prefetch_related("tags")
+        return Product.objects.filter().prefetch_related("tags")
 
     def create(self, request, *args, **kwargs):
         print(request.data)
@@ -72,3 +105,4 @@ class ListCreateProductView(ListCreateAPIView):
 # => base64.b64encode(file.read()).decode('utf-8') and then pass file in json
 # => use separate file upload for file upload and normal data and separate endpoint for nested data
 # => Use a custom multipart json serializer https://stackoverflow.com/questions/30176570/using-django-rest-framework-how-can-i-upload-a-file-and-send-a-json-payload
+
