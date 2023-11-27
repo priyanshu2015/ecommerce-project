@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'orders',
     'products',
     'users',
+    'admin_dashboard',
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist"
@@ -209,3 +210,6 @@ SIMPLE_JWT = {
 }
 
 ALLOW_NEW_REFRESH_TOKENS_FOR_UNVERIFIED_USERS = False
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'

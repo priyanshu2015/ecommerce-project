@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.request import Request
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
-from .serializers import CreateUserSerializer, CustomTokenRefreshSerializer, UserLoginSerializer
+from .serializers import CreateUserSerializer, CustomTokenRefreshSerializer, LogoutRequestSerializer, UserLoginSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from common.helpers import validation_error_handler
@@ -16,6 +16,9 @@ from common.utils import Utility
 import logging
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 
 logger = logging.getLogger(__file__)
 
@@ -178,3 +181,52 @@ class CustomTokenRefreshView(TokenRefreshView):
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         return super().post(request, *args, **kwargs)
+    
+
+
+class UserLogoutView(APIView):
+    serializer_class = LogoutRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        request_data = request.data
+        serializer = self.serializer_class(data=request_data)
+        if serializer.is_valid() is False:
+            return Response({
+                "status": "error",
+                "message": validation_error_handler(serializer.errors),
+                "payload": {
+                    "errors": serializer.errors
+                }
+            }, status.HTTP_400_BAD_REQUEST)
+        validated_data = serializer.validated_data
+        try:
+            if validated_data.get("all"):
+                for token in OutstandingToken.objects.filter(user=request.user):
+                    _, _ = BlacklistedToken.objects.get_or_create(token=token)
+                return Response({
+                    "status": "success",
+                    "message": "Successfully logged out from all devices",
+                    "payload": {}
+                }, status=status.HTTP_200_OK)
+            refresh_token = validated_data.get("refresh")
+            token = RefreshToken(token=refresh_token)
+            token.blacklist()
+            return Response({
+                "status": "success",
+                    "message": "Successfully logged out",
+                    "payload": {}
+            }, status=status.HTTP_200_OK)
+        except TokenError:
+            return Response({
+                "detail": "Token is blacklisted",
+                "code": "token_not_valid"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception:
+            return Response({
+                "status": "error",
+                "message": "Error occurred",
+                "payload": {}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+        
