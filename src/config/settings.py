@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'admin_dashboard',
     "rest_framework",
     "rest_framework_simplejwt",
-    "rest_framework_simplejwt.token_blacklist"
+    "rest_framework_simplejwt.token_blacklist",
+    "drf_yasg"
 ]
 
 MIDDLEWARE = [
@@ -213,3 +214,20 @@ ALLOW_NEW_REFRESH_TOKENS_FOR_UNVERIFIED_USERS = False
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+
+RAZORPAY_MERCHANT_ID = config("RAZORPAY_MERCHANT_ID")
+
+
+REST_FRAMEWORK["DEFAULT_SCHEMA_CLASS"] = "rest_framework.schemas.coreapi.AutoSchema"
+
+SWAGGER_SETTINGS = {
+    "USE_SESSION_AUTH": True,
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}
+    },
+    "JSON_EDITOR": True
+}
+
+REDOC_SETTINGS = {
+    "LAZY_RENDERING": False
+}

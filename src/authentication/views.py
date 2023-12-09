@@ -19,13 +19,15 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from drf_yasg.utils import swagger_auto_schema
 
 logger = logging.getLogger(__file__)
 
 # Create your views here.
-class SignupView(APIView):
+class SignupView(GenericAPIView):
     serializer_class = CreateUserSerializer
 
+    @swagger_auto_schema(responses={status.HTTP_200_OK: CreateUserSerializer})
     def post(self, request, *args, **kwargs):
         request_data = request.data
         serializer = self.serializer_class(data=request_data)

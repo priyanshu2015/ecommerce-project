@@ -69,8 +69,8 @@ class ListCreateProductView(ListCreateAPIView):
         return super().list(request, *args, **kwargs)
     
     def get_serializer_class(self):
-        print(self.request.version)
-        if self.request.method == "POST":
+        # print(self.request.version)
+        if self.request and self.request.method == "POST":
             return CreateProductSerializer
         return ProductSerializer
     
