@@ -23,7 +23,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 logger = logging.getLogger(__file__)
 
 # Create your views here.
-class SignupView(APIView):
+class SignupView(GenericAPIView):
     serializer_class = CreateUserSerializer
 
     def post(self, request, *args, **kwargs):
@@ -60,7 +60,7 @@ class SignupView(APIView):
                 is_active=False,
                 **validated_data
             )
-        
+
         serializer_data = self.serializer_class(user).data
 
         # send email
@@ -95,7 +95,7 @@ class SignupView(APIView):
                 "message": "Some error occurred",
                 "payload": {}
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
 
 class ActivateAccountView(APIView):
     def get(self, request, uidb64, token):
@@ -117,7 +117,7 @@ class ActivateAccountView(APIView):
             "message": "Activation link is invalid",
             "payload": {}
         }, status=status.HTTP_403_FORBIDDEN)
-    
+
 
 class LoginView(APIView):
     serializer_class = UserLoginSerializer
@@ -181,7 +181,7 @@ class CustomTokenRefreshView(TokenRefreshView):
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         return super().post(request, *args, **kwargs)
-    
+
 
 
 class UserLogoutView(APIView):
@@ -228,5 +228,4 @@ class UserLogoutView(APIView):
                 "message": "Error occurred",
                 "payload": {}
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-        
+

@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'admin_dashboard',
     "rest_framework",
     "rest_framework_simplejwt",
-    "rest_framework_simplejwt.token_blacklist"
+    "rest_framework_simplejwt.token_blacklist",
+    "drf_yasg"
 ]
 
 MIDDLEWARE = [
@@ -89,14 +90,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'eccomerce_project_db',
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "127.0.0.1",
-        "PORT": "5432"
-    },
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'eccomerce_project_db',
+    #     "USER": "postgres",
+    #     "PASSWORD": "postgres",
+    #     "HOST": "127.0.0.1",
+    #     "PORT": "5432"
+    # },
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 
 
@@ -174,7 +179,7 @@ if (not os.path.exists(JWT_PRIVATE_KEY_PATH)) or (not os.path.exists(JWY_PUBLIC_
     )
     with open(JWT_PRIVATE_KEY_PATH, "w") as pk:
         pk.write(pem.decode())
-    
+
     public_key = private_key.public_key()
     pem_public = public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
@@ -213,3 +218,37 @@ ALLOW_NEW_REFRESH_TOKENS_FOR_UNVERIFIED_USERS = False
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+
+RAZORPAY_MERCHANT_ID = config("RAZORPAY_MERCHANT_ID")
+
+
+# DRF Official Config
+REST_FRAMEWORK["DEFAULT_SCHEMA_CLASS"] = "rest_framework.schemas.coreapi.AutoSchema"
+
+# drf_yasg config
+# from inflection import camelize
+# from drf_yasg.inspectors import SwaggerAutoSchema
+
+# class CamelCaseOperationIDAutoSchema(SwaggerAutoSchema):
+#    def get_operation_id(self, operation_keys):
+#       operation_id = super(CamelCaseOperationIDAutoSchema, self).get_operation_id(operation_keys)
+#       return camelize(operation_id, uppercase_first_letter=False)
+
+SWAGGER_SETTINGS = {
+    "USE_SESSION_AUTH": True,
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"},
+        # 'Server_Key': {
+        #     'type': 'apiKey',
+        #     'name': 'server-key',
+        #     'in': 'header'
+        # }
+    },
+    "JSON_EDITOR": True,
+    # 'DEFAULT_AUTO_SCHEMA_CLASS': CamelCaseOperationIDAutoSchema,
+}
+
+# If set, enables lazy rendering mode in ReDoc. This mode is useful for APIs with big number of operations (e.g. > 50). In this mode ReDoc shows initial screen ASAP and then renders the rest operations asynchronously while showing progress bar on the top.
+REDOC_SETTINGS = {
+    "LAZY_RENDERING": False,
+}
