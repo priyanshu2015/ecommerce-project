@@ -9,15 +9,28 @@ from django.db.models import F
 from django.db import transaction
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
+from common.helpers import validation_error_handler
+from orders.models import Order, OrderItem
+from orders.choices import OrderStatusChoice
+from .utils import RazorpayUtility
+from decimal import Decimal
+from django.conf import settings
+from .helpers import test_func
+from rest_framework.generics import GenericAPIView
 
 # Create your views here.
-class AddtoCartView(APIView):
+class AddtoCartView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AddToCartRequestSerializer
     
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if serializer.is_valid() is False:
+            return Response({
+                "status": "error",
+                "message": validation_error_handler(serializer.errors),
+                "payload": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
         validated_data = serializer.validated_data
         product_uuid = validated_data["product_uuid"]
         product = Product.objects.filter(uuid=product_uuid).first()
@@ -26,7 +39,7 @@ class AddtoCartView(APIView):
                 "status": "error",
                 "message": "Product not found",
                 "payload": {}
-            }, status=status.HTTP_200)
+            }, status=status.HTTP_404_NOT_FOUND)
         with transaction.atomic():
             cart = Cart.objects.filter(user=request.user).select_for_update(nowait=True).first()
             if cart is None:
@@ -61,73 +74,93 @@ class DisplayCartView(RetrieveAPIView):
         cart = Cart.objects.filter(user=self.request.user).prefetch_related("items__product").first()
         return cart
     
-
-# class PlaceOrderView(APIView):
     
-#     def post(self, request, *args, **kwargs):
-#         with transaction.atomic():
-#             cart = Cart.objects.filter(user=request.user).select_for_update(nowait=True).first()
-#             if cart is None:
-#                 return Response({
-#                     "status": "error",
-#                     "message": "Cart is empty",
-#                     "payload": {}
-#                 }, status=status.HTTP_400_BAD_REQUEST)
-#             cart_items = CartItem.objects.filter(cart=cart)
-#             final_price = 0
-#             if (len(cart_items) <= 0):
-#                 return Response({
-#                     "status": "error",
-#                     "message": "Cart is empty",
-#                     "payload": {}
-#                 }, status=status.HTTP_400_BAD_REQUEST)
-#             order = Order.objects.create(
-#                 user=request.user,
-#                 amount=0,
-#                 status=OrderStatusChoice.PENDING
-#             )
-#             for item in cart_items:
-#                 order_item = OrderItem.objects.create(
-#                     order=order,
-#                     product=item.product,
-#                     quantity=item.quantity,
-#                     price=item.product.price
-#                 )
-#                 final_price = final_price + (item.product.price * item.quantity)
+
+    
+
+class PlaceOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        with transaction.atomic():
+            cart = Cart.objects.filter(user=request.user).select_for_update(nowait=True).first()
+            if cart is None:
+                return Response({
+                    "status": "error",
+                    "message": "Cart is empty",
+                    "payload": {}
+                }, status=status.HTTP_400_BAD_REQUEST)
+            cart_items = CartItem.objects.filter(cart=cart)
+            final_price = 0
+            if (len(cart_items) <= 0):
+                return Response({
+                    "status": "error",
+                    "message": "Cart is empty",
+                    "payload": {}
+                }, status=status.HTTP_400_BAD_REQUEST)
+            order = Order.objects.create(
+                user=request.user,
+                amount=0,
+                status=OrderStatusChoice.PENDING
+            )
+            for item in cart_items:
+                order_item = OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    price=item.product.price
+                )
+                final_price = final_price + (item.product.price * item.quantity)
                 
-#             order.amount = final_price
-#             order.save()
-#             order_currency = "INR"
-#             callback_url = ""
-#             notes = {
-                
-#             }
-#             try:
-#                 razorpay_order_response = RazorpayUtility.create_order()
-#                 if razorpay_order_response.ok:
-#                     response_data = razorpay_order_response.json()
-#                     razorpay_order_id = response_data["id"]
-#                     order.provider_order_id = razorpay_order_id
-#                     order.save()
-#                     return Response({
-#                         "status": "success",
-#                         "message": "Order created successfully, please proceed for payment",
-#                         "payload": {
-#                             "order": {
-#                                 "uuid": ""
-#                             }
-#                             "razorpay_order_id": razorpay_order_id,
-#                             "razorpay_merchant_id": settings.RAZORPAY_MERCHANT_ID,
-#                             # "callback_url": 
-#                             "currency": order_currency
-#                         }
-#                     })
-#             except Exception:
-#                 return Response(
-#                     {
-#                         "status": "error"
-#                     }
-#                 )
+            order.amount = final_price
+            order.save()
+            order_currency = "INR"
+            callback_url = ""
+            notes = {}
+            test_func(a=10, b=20)
+            try:
+                razorpay_order_response = RazorpayUtility.create_order(
+                    client_order_id=order.uuid,
+                    amount=int(final_price * Decimal("100")),
+                    notes=notes,
+                    currency=order_currency
+                )
+                if razorpay_order_response.ok:
+                    response_data = razorpay_order_response.json()
+                    razorpay_order_id = response_data["id"]
+                    order.provider_order_id = razorpay_order_id
+                    order.save()
+                    return Response(
+                        {
+                            "status": "success",
+                            "message": "Order created successfully, please proceed for payment",
+                            "payload": {
+                                "order": {
+                                    "uuid": order.uuid
+                                },
+                                "razorpay_order_id": razorpay_order_id,
+                                "razorpay_merchant_id": settings.RAZORPAY_MERCHANT_ID,
+                                # "callback_url": 
+                                "currency": order_currency
+                            }
+                        }, status=status.HTTP_200_OK
+                    )
+                else:
+                    return Response(
+                        {
+                            "status": "error",
+                            "message": "Some error occurred",
+                            "payload": {}
+                        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            except Exception:
+                return Response(
+                    {
+                        "status": "error",
+                        "message": "Some error occurred",
+                        "payload": {}
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
             
         
         

@@ -4,10 +4,10 @@ from products.models import Product
 
 
 class AddToCartRequestSerializer(serializers.Serializer):
-    product_uuid = serializers.CharField()
+    product_uuid = serializers.UUIDField()
     
     
-class ProductSerializer(serializers.ModelSerializer):
+class UserProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
@@ -19,7 +19,7 @@ class ProductSerializer(serializers.ModelSerializer):
     
     
 class CartItemSerializer(serializers.ModelSerializer):
-    product = ProductSerializer()
+    product = UserProductSerializer()
     
     class Meta:
         model = CartItem
