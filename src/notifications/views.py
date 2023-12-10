@@ -12,6 +12,7 @@ from drf_yasg.utils import swagger_auto_schema
 from django_celery_beat.models import PeriodicTask, CrontabSchedule
 from django.utils import timezone
 import shortuuid
+import json
 
 from notifications.tasks import notification_mapper
 
@@ -42,7 +43,9 @@ class ScheduleNotificationView(APIView):
             month_of_year=scheduled_notification.scheduled_at.month
         )
         uuid = shortuuid.uuid()
-        task = PeriodicTask.objects.create(crontab=schedule, name=f"notification_{uuid}", task='notifications.tasks.notification_mapper', one_off=True, kwargs={"id": scheduled_notification.id})
+        task = PeriodicTask.objects.create(crontab=schedule, name=f"notification_{uuid}", task='notifications.tasks.notification_mapper', one_off=True, args=json.dumps([scheduled_notification.id]))# kwargs={"id": scheduled_notification.id})
+        # task.enabled = True
+        # task.save()
 
         # countdown = scheduled_notification.scheduled_at.timestamp() - timezone.now().timestamp()
         # task = notification_mapper.apply_async(kwargs={"id": scheduled_notification.id}, countdown=countdown)

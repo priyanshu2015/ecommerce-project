@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from .models import Notification
 from django.db import transaction
 from django.contrib.auth import get_user_model
+from celery import shared_task
 
 User = get_user_model()
 
@@ -11,8 +12,8 @@ User = get_user_model()
 def send_notification():
     pass
 
-
-def notification_sender():
+@shared_task(bind=True)
+def notification_sender(self):
     time_threshold = timezone.now() - timedelta(minutes=10)
     # TODO: Add Pagination
     notifications = Notification.objects.filter(
@@ -28,12 +29,12 @@ def notification_sender():
             pass
 
 
-
+@shared_task(bind=True)
 def notification_mapper(self, id):
     scheduled_notification = ScheduledNotification.objects.filter(
         id=id,
         status="PENDING"
-    ).select_for_update(nowait=True)
+    ).select_for_update(nowait=True).first()
     # TODO: Add Pagination
     if scheduled_notification.type == "USER_SPECIFIC":
         pending_users = User.objects.filter(id__in=scheduled_notification.user_ids).exclude(notifications__reference_id=scheduled_notification.id)
@@ -53,8 +54,8 @@ def notification_mapper(self, id):
                     medium=medium
                 )
 
-
-def notification_scheduler():
+@shared_task(bind=True)
+def notification_scheduler(self):
     time_threshold = timezone.now() - timedelta(minutes=30)
     # TODO: Add Pagination
     scheduled_notifications = ScheduledNotification.objects.filter(

@@ -1,0 +1,3 @@
+celery -A config beat -l info
+celery -A config.celery worker -E --pool=solo -l info
+celery -A config.celery worker -E --pool=solo -l info --scheduler config.task_schedulers:DatabaseSchedulerWithCleanup
