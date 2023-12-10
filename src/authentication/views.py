@@ -2,6 +2,8 @@ from django.shortcuts import render
 from rest_framework.request import Request
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
+
+from authentication.tasks import send_verify_email_link
 from .serializers import CreateUserSerializer, CustomTokenRefreshSerializer, LogoutRequestSerializer, UserLoginSerializer
 from rest_framework.response import Response
 from rest_framework import status
@@ -62,42 +64,42 @@ class SignupView(GenericAPIView):
                 is_active=False,
                 **validated_data
             )
-        
+
         serializer_data = self.serializer_class(user).data
 
         # send email
-        subject = "Verify Email for your Account Verification on WonderShop"
-        template = "auth/email/verify_email.html"
-        context_data = {
-            "host": settings.FRONTEND_HOST,
-            "uid": urlsafe_base64_encode(force_bytes(user.id)),
-            "token": account_activation_token.make_token(user=user),
-            "protocol": settings.FRONTEND_PROTOCOL
-        }
-        print(context_data)
-        try:
-            # Utility.send_mail_via_sendgrid(
-            #     user.email,
-            #     subject,
-            #     template,
-            #     context_data
-            # )
-            return Response({
-                "status": "success",
-                "message": "Sent the account verification link to your email address",
-                "payload": {
-                    **serializer_data,
-                    "tokens": AuthHelper.get_tokens_for_user(user)
-                }
-            })
-        except Exception:
-            logger.error("Some error occurred in signup endpoint", exc_info=True)
-            return Response({
-                "status": "error",
-                "message": "Some error occurred",
-                "payload": {}
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+        # subject = "Verify Email for your Account Verification on WonderShop"
+        # template = "auth/email/verify_email.html"
+        # context_data = {
+        #     "host": settings.FRONTEND_HOST,
+        #     "uid": urlsafe_base64_encode(force_bytes(user.id)),
+        #     "token": account_activation_token.make_token(user=user),
+        #     "protocol": settings.FRONTEND_PROTOCOL
+        # }
+        # try:
+        #     # Utility.send_mail_via_sendgrid(
+        #     #     user.email,
+        #     #     subject,
+        #     #     template,
+        #     #     context_data
+        #     # )
+        #     return Response({
+        #         "status": "success",
+        #         "message": "Sent the account verification link to your email address",
+        #         "payload": {
+        #             **serializer_data,
+        #             "tokens": AuthHelper.get_tokens_for_user(user)
+        #         }
+        #     })
+        # except Exception:
+        #     logger.error("Some error occurred in signup endpoint", exc_info=True)
+        #     return Response({
+        #         "status": "error",
+        #         "message": "Some error occurred",
+        #         "payload": {}
+        #     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        send_verify_email_link.delay(user_id=user.id)
+
 
 class ActivateAccountView(APIView):
     def get(self, request, uidb64, token):
@@ -119,7 +121,7 @@ class ActivateAccountView(APIView):
             "message": "Activation link is invalid",
             "payload": {}
         }, status=status.HTTP_403_FORBIDDEN)
-    
+
 
 class LoginView(APIView):
     serializer_class = UserLoginSerializer
@@ -183,7 +185,7 @@ class CustomTokenRefreshView(TokenRefreshView):
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         return super().post(request, *args, **kwargs)
-    
+
 
 
 class UserLogoutView(APIView):
@@ -230,5 +232,4 @@ class UserLogoutView(APIView):
                 "message": "Error occurred",
                 "payload": {}
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-        
+

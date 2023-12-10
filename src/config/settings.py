@@ -52,7 +52,9 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
-    "drf_yasg"
+    "drf_yasg",
+    "notifications",
+    'django_celery_beat'
 ]
 
 MIDDLEWARE = [
@@ -98,6 +100,10 @@ DATABASES = {
         "HOST": "127.0.0.1",
         "PORT": "5432"
     },
+    # "default": {
+    #     "ENGINE": "django.db.backends.sqlite3",
+    #     "NAME": BASE_DIR / "db.sqlite3",
+    # }
 }
 
 
@@ -175,7 +181,7 @@ if (not os.path.exists(JWT_PRIVATE_KEY_PATH)) or (not os.path.exists(JWY_PUBLIC_
     )
     with open(JWT_PRIVATE_KEY_PATH, "w") as pk:
         pk.write(pem.decode())
-    
+
     public_key = private_key.public_key()
     pem_public = public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
@@ -231,3 +237,16 @@ SWAGGER_SETTINGS = {
 REDOC_SETTINGS = {
     "LAZY_RENDERING": False
 }
+
+
+# CELERY SETTINGS
+
+CELERY_BROKER_URL = "amqp://guest:guest@127.0.0.1:5672/"
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Kolkata'
+CELERY_RESULT_BACKEND = 'django-db'
+
+#CELERY BEAT
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
