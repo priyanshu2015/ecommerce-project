@@ -1,0 +1,45 @@
+class NotificationTypeChoice:
+    PUBLIC = "PUBLIC"
+    USER_SPECIFIC = "USER_SPECIFIC"
+    
+    CHOICE_LIST = [
+        (PUBLIC, PUBLIC),
+        (USER_SPECIFIC, USER_SPECIFIC)
+    ]
+    
+    
+class EventTypeChoice:
+    ORDER_UPDATE = "ORDER_UPDATE"
+    PROMOTIONAL = "PROMOTIONAL"
+    ANNOUNCEMENT = "ANNOUNCEMENT"
+    
+    CHOICE_LIST = [
+        (ORDER_UPDATE, ORDER_UPDATE),
+        (PROMOTIONAL, PROMOTIONAL),
+        (ANNOUNCEMENT, ANNOUNCEMENT)
+    ]
+    
+    
+class MediumChoice:
+    PHONE_SMS = "PHONE_SMS"
+    EMAIL = "EMAIL"
+    PUSH_NOTIFICATION = "PUSH_NOTIFICATION"
+    APP_NOTIFICATION = "APP_NOTIFICATION"
+    WHATSAPP = "WHATSAPP"
+    
+    CHOICE_LIST = [
+        (PHONE_SMS, PHONE_SMS),
+        (EMAIL, EMAIL),
+        (PUSH_NOTIFICATION, PUSH_NOTIFICATION),
+        (APP_NOTIFICATION, APP_NOTIFICATION),
+        (WHATSAPP, WHATSAPP)
+    ]
+    
+class NotificationStatusChoice:
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    
+    CHOICE_LIST = [
+        (PENDING, PENDING),
+        (SUCCESS, SUCCESS)
+    ]

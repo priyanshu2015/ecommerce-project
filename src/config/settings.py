@@ -52,7 +52,9 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
-    "drf_yasg"
+    "drf_yasg",
+    "django_celery_beat",
+    "notifications"
 ]
 
 MIDDLEWARE = [
@@ -92,7 +94,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'eccomerce_project_db',
+        'NAME': 'ecommerce_project_db',
         "USER": "postgres",
         "PASSWORD": "postgres",
         "HOST": "127.0.0.1",
@@ -231,3 +233,11 @@ SWAGGER_SETTINGS = {
 REDOC_SETTINGS = {
     "LAZY_RENDERING": False
 }
+
+CELERY_BROKER_URL = "amqp://guest:guest@127.0.0.1:5672/"
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TASK_SERIALIZER = "json"
+# CELERY_TIMEZONE = "UTC"
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'

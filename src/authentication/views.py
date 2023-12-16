@@ -20,6 +20,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from drf_yasg.utils import swagger_auto_schema
+from .tasks import send_verify_email_link
 
 logger = logging.getLogger(__file__)
 
@@ -66,37 +67,46 @@ class SignupView(GenericAPIView):
         serializer_data = self.serializer_class(user).data
 
         # send email
-        subject = "Verify Email for your Account Verification on WonderShop"
-        template = "auth/email/verify_email.html"
-        context_data = {
-            "host": settings.FRONTEND_HOST,
-            "uid": urlsafe_base64_encode(force_bytes(user.id)),
-            "token": account_activation_token.make_token(user=user),
-            "protocol": settings.FRONTEND_PROTOCOL
-        }
-        print(context_data)
-        try:
-            # Utility.send_mail_via_sendgrid(
-            #     user.email,
-            #     subject,
-            #     template,
-            #     context_data
-            # )
-            return Response({
-                "status": "success",
-                "message": "Sent the account verification link to your email address",
-                "payload": {
-                    **serializer_data,
-                    "tokens": AuthHelper.get_tokens_for_user(user)
-                }
-            })
-        except Exception:
-            logger.error("Some error occurred in signup endpoint", exc_info=True)
-            return Response({
-                "status": "error",
-                "message": "Some error occurred",
-                "payload": {}
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # subject = "Verify Email for your Account Verification on WonderShop"
+        # template = "auth/email/verify_email.html"
+        # context_data = {
+        #     "host": settings.FRONTEND_HOST,
+        #     "uid": urlsafe_base64_encode(force_bytes(user.id)),
+        #     "token": account_activation_token.make_token(user=user),
+        #     "protocol": settings.FRONTEND_PROTOCOL
+        # }
+        # print(context_data)
+        # try:
+        #     # Utility.send_mail_via_sendgrid(
+        #     #     user.email,
+        #     #     subject,
+        #     #     template,
+        #     #     context_data
+        #     # )
+        #     return Response({
+        #         "status": "success",
+        #         "message": "Sent the account verification link to your email address",
+        #         "payload": {
+        #             **serializer_data,
+        #             "tokens": AuthHelper.get_tokens_for_user(user)
+        #         }
+        #     })
+        # except Exception:
+        #     logger.error("Some error occurred in signup endpoint", exc_info=True)
+        #     return Response({
+        #         "status": "error",
+        #         "message": "Some error occurred",
+        #         "payload": {}
+        #     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        send_verify_email_link.delay()
+        return Response({
+            "status": "success",
+            "message": "Sent the account verification link to your email address",
+            "payload": {
+                **serializer_data,
+                "tokens": AuthHelper.get_tokens_for_user(user)
+            }
+        })
         
 
 class ActivateAccountView(APIView):
@@ -121,7 +131,7 @@ class ActivateAccountView(APIView):
         }, status=status.HTTP_403_FORBIDDEN)
     
 
-class LoginView(APIView):
+class LoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
 
     def post(self, request, *args, **kwargs):
