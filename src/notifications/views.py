@@ -12,6 +12,7 @@ from django_celery_beat.models import PeriodicTask, CrontabSchedule
 import shortuuid
 import json
 from drf_yasg.utils import swagger_auto_schema
+from django.db import transaction
 
 
 class ScheduleNotificationView(APIView):
@@ -32,24 +33,25 @@ class ScheduleNotificationView(APIView):
                 }
             }, status.HTTP_400_BAD_REQUEST)
         validated_data = serializer.validated_data
-        scheduled_notification = ScheduledNotification.objects.create(
-            status=NotificationStatusChoice.PENDING,
-            **validated_data
-        )
-        schedule, created = CrontabSchedule.objects.get_or_create(
-            hour=scheduled_notification.scheduled_at.hour,
-            minute=scheduled_notification.scheduled_at.minute,
-            day_of_month=scheduled_notification.scheduled_at.day,
-            month_of_year=scheduled_notification.scheduled_at.month
-        )
-        uuid = shortuuid.uuid()
-        task = PeriodicTask.objects.create(
-            crontab=schedule, 
-            name=f"notification_{uuid}",
-            task="notifications.tasks.notification_mapper",
-            one_off=True,
-            args=json.dumps([scheduled_notification.id])
-        )
+        with transaction.atomic():
+            scheduled_notification = ScheduledNotification.objects.create(
+                status=NotificationStatusChoice.PENDING,
+                **validated_data
+            )
+            # schedule, created = CrontabSchedule.objects.get_or_create(
+            #     hour=scheduled_notification.scheduled_at.hour,
+            #     minute=scheduled_notification.scheduled_at.minute,
+            #     day_of_month=scheduled_notification.scheduled_at.day,
+            #     month_of_year=scheduled_notification.scheduled_at.month
+            # )
+            # uuid = shortuuid.uuid()
+            # task = PeriodicTask.objects.create(
+            #     crontab=schedule, 
+            #     name=f"notification_{uuid}",
+            #     task="notifications.tasks.notification_mapper",
+            #     one_off=True,
+            #     args=json.dumps([scheduled_notification.id])
+            # )
         payload = ScheduleNotificationSerializer(scheduled_notification).data
         response_data = {
             "status": "success",
