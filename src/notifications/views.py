@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from common.permissions import IsSuperUser
+from notifications.choices import NotificationStatusChoice
 from .serializers import ScheduleNotificationSerializer, ScheduleNotificationBaseSerializer, ScheduleNotificationRequestSerializer
 from rest_framework.response import Response
 from common.helpers import validation_error_handler
@@ -32,12 +33,13 @@ class ScheduleNotificationView(APIView):
             }, status.HTTP_400_BAD_REQUEST)
         validated_data = serializer.validated_data
         scheduled_notification = ScheduledNotification.objects.create(
+            status=NotificationStatusChoice.PENDING,
             **validated_data
         )
         schedule, created = CrontabSchedule.objects.get_or_create(
             hour=scheduled_notification.scheduled_at.hour,
             minute=scheduled_notification.scheduled_at.minute,
-            day_of_month=scheduled_notification.scheduled_at.minute,
+            day_of_month=scheduled_notification.scheduled_at.day,
             month_of_year=scheduled_notification.scheduled_at.month
         )
         uuid = shortuuid.uuid()
