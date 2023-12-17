@@ -9,7 +9,7 @@ from datetime import timedelta
 
 @shared_task(bind=True)
 def notification_mapper(self, id):
-    scheduled_notification = ScheduledNotification.objects.filter(
+    scheduled_notification = ScheduledNotification.objects.get(
         id=id,
         status="PENDING"
     )

@@ -17,8 +17,8 @@ app.config_from_object(settings, namespace='CELERY')
 app.conf.beat_schedule = {
     "delete-expired-tokens": {
         "task": "authentication.tasks.delete_expired_tokens",
-        # "schedule": 12 * 60 * 60
-        "schedule": crontab(hour=1, minute=19),
+        "schedule": 2
+        # "schedule": crontab(hour=1, minute=19),
         # "options": {"queue": "tokens"}
     }
 }
